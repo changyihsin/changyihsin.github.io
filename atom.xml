@@ -4,7 +4,7 @@
   <title><![CDATA[My Octopress Blog]]></title>
   <link href="http://changyihsin.github.io/atom.xml" rel="self"/>
   <link href="http://changyihsin.github.io/"/>
-  <updated>2013-06-03T12:31:54+08:00</updated>
+  <updated>2013-06-03T13:40:34+08:00</updated>
   <id>http://changyihsin.github.io/</id>
   <author>
     <name><![CDATA[Your Name]]></name>
@@ -12,6 +12,46 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Octopress Blog Howto]]></title>
+    <link href="http://changyihsin.github.io/blog/2013/06/03/first-blog/"/>
+    <updated>2013-06-03T13:25:00+08:00</updated>
+    <id>http://changyihsin.github.io/blog/2013/06/03/first-blog</id>
+    <content type="html"><![CDATA[<p>Create a new article.</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">bundle</span> <span class="n">exec</span> <span class="n">rake</span> <span class="n">new_post</span><span class="p">[</span><span class="err">&#39;</span><span class="n">Title</span> <span class="n">of</span> <span class="n">your</span> <span class="n">post</span><span class="err">&#39;</span><span class="p">]</span> <span class="n">or</span>
+</span><span class='line'><span class="n">rake</span> <span class="n">new_post</span><span class="p">[</span><span class="err">&#39;</span><span class="n">Title</span> <span class="n">of</span> <span class="n">your</span> <span class="n">post</span><span class="err">&#39;</span><span class="p">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Preview your Blog.</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">bundle</span> <span class="n">exec</span> <span class="n">rake</span> <span class="n">preview</span> <span class="n">or</span>
+</span><span class='line'><span class="n">rake</span> <span class="n">preview</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Deploy your articles to Blog</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="err">$</span> <span class="n">bundle</span> <span class="n">exec</span> <span class="n">rake</span> <span class="n">generate</span>
+</span><span class='line'><span class="err">$</span> <span class="n">bundle</span> <span class="n">exec</span> <span class="n">rake</span> <span class="n">deploy</span>  <span class="n">or</span>
+</span><span class='line'><span class="err">$</span> <span class="n">rake</span> <span class="n">generate</span>
+</span><span class='line'><span class="err">$</span> <span class="n">rake</span> <span class="n">deploy</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[JavaScript - Typed arrays, ArrayBuffer and DataView]]></title>
