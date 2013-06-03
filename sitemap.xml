@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
+    <url>
+        <loc>http://changyihsin.github.io/blog/2013/06/03/octopress-howto/</loc>
+        <lastmod>2013-06-03T12:30:57+08:00</lastmod>
+    </url>
+    <url>
+        <loc>http://changyihsin.github.io/blog/archives/</loc>
+        <lastmod>2013-06-03T12:30:57+08:00</lastmod>
+    </url>
+    <url>
+        <loc>http://changyihsin.github.io/robots.txt</loc>
+        <lastmod>2013-06-03T12:19:24+08:00</lastmod>
+    </url>
+    <url>
+        <loc>http://changyihsin.github.io/</loc>
+        <lastmod>2013-06-03T12:30:57+08:00</lastmod>
+    </url>
+</urlset>

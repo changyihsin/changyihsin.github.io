@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: 
+
+Sitemap: http://changyihsin.github.io/sitemap.xml 
