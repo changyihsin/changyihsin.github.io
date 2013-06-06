@@ -4,7 +4,7 @@
   <title><![CDATA[My Octopress Blog]]></title>
   <link href="http://changyihsin.github.io/atom.xml" rel="self"/>
   <link href="http://changyihsin.github.io/"/>
-  <updated>2013-06-03T13:40:34+08:00</updated>
+  <updated>2013-06-06T17:04:41+08:00</updated>
   <id>http://changyihsin.github.io/</id>
   <author>
     <name><![CDATA[Your Name]]></name>
@@ -12,6 +12,250 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Android-VPN-Howto]]></title>
+    <link href="http://changyihsin.github.io/blog/2013/06/06/android-vpn-howto/"/>
+    <updated>2013-06-06T16:18:00+08:00</updated>
+    <id>http://changyihsin.github.io/blog/2013/06/06/android-vpn-howto</id>
+    <content type="html"><![CDATA[<h2>1. VPN related source code in Froyo.</h2>
+
+<p>1.1 java layer:
+a. UI source code:
+packages/apps/Settings/src/com/android/settings/vpn
+b. vpn server source code:
+frameworks/base/vpn/java/android/net/vpn
+framework/base/packages/vpnservices/src/com/android/server/vpn</p>
+
+<p>1.2 native layer:
+external/mtpd: used to control pptp and l2tp modules.
+external/ipsec-tools: used to configure ipsec.
+of cause, it will use pppd, which is in /external/ppp/.</p>
+
+<p>1.3 driver layer:
+Apart from the feature in standard linux kernel, Google adds the below two files for pptp and l2tp.
+driver/net/pppopns.c: for ppp over pptp.
+driver/net/pppolac.c: for ppp over l2tp.</p>
+
+<h2>2. Java layer.</h2>
+
+<p>VPN Java layer is responsible for VPN configuration, it can be divided into two sub-layers,
+the upper layer is VPN settings, the lower layer is VPN service which is in framework.
+VPN Java layer has two interfaces to impact native layer,
+a. it uses Daemon class to start / stop two daemons, these two daemons are: mtpd and racoon.
+mtpd is for pptp and l2tp.
+racoon is for ipsec.
+b. it uses local socket to communicate with native layer. VPN Java layer uses this local socket to
+do two things. The first is to send launch parameters to mtpd or racoon deamon.
+The second is to receive the status of mtpd.
+in addition, java layer will read the status of VPN from system property &ndash; &ldquo;vpn.status&rdquo; which is writen by ip-up-vpn.
+the VPN profiles is saved in /misc/vpn/profiles/ folder.</p>
+
+<h2>3. Native layer.</h2>
+
+<p>as we said in Java layer, mtpd and racoon daemon are launched by Java layer, what is more, Java layer also
+send launch parameter to these daemon by local socket.
+for mtpd daemon, the local socket server file is /dev/socket/mtpd.
+for racoon deamon, the local socket server file is /dev/socket/racoon.
+in fact, we can launch these daemon by command line which can emulate Java layer&rsquo;s operation.
+the below is a example:
+mtpd pptp 192.168.1.32 1723 &lsquo;&rsquo; linkname vpn name 111 password 222 refuse-eap nodefaultroute usepeerdns idle 1800 mtu 1300 mru 1300 +mppe &amp;
+mtpd l2tp 192.168.1.32 1701 &lsquo;&rsquo; linkname vpn name 111 password 222 refuse-eap nodefaultroute usepeerdns idle 1800 mtu 1300 mru 1300 &amp;</p>
+
+<p>the usage of Mtpd and Racoon are as below.</p>
+
+<h1>mtpd</h1>
+
+<p>Usage: mtpd &lt;protocol-args> &lsquo;&rsquo; &lt;pppd-args>, where protocol-args are one of:</p>
+
+<pre><code>   l2tp &lt;server&gt; &lt;port&gt; [secret]
+   pptp &lt;server&gt; &lt;port&gt;
+</code></pre>
+
+<h1>racoon</h1>
+
+<p>Usage: racoon server port pre-shared-key</p>
+
+<pre><code>   racoon server port my-private-key my-cert ca-cert
+</code></pre>
+
+<p>How does mtpd control driver layer to enable/disable VPN link, let us focus on it and continue it in the second part.</p>
+
+<p>In Froyo, there are four types of VPN.
+PPTP VPN.
+L2TP VPN.
+L2TP/IPsec PSK VPN.
+L2TP/IPsec CRT VPN.</p>
+
+<p>the below describes the principle of PPTP VPN, we divide main process into two planes: control plane and data plane,
+control plane describes how to set up PPTP VPN and prepares for data plane. data plane describes data transmission.</p>
+
+<h2>1. control plane</h2>
+
+<p>while mtpd is launched, it will do the below things:
+1. setup local socket and obtain boot parameters from Java.
+2. initialize and connect
+   pptp_connect() or
+   l2tp_connect()
+3. create a stream socket to setup a link and connect to pptp server.
+4. use poll() to receive message from pptp server, handle it with pptp_process().
+5. launch ppd daemon once pptp link is established.
+6. create a AF_PPPOX socket
+   The above describes mtpd daemon, now let us focus on kernel layer.
+7. while kernel is launched, pppopns_init() function is called, in this function, it will call proto_register()
+   and register_pppox_proto() to register pppopns protocol.
+8. as we said in &lsquo;f&rsquo; item, mtpd calls pppopns_connect() function, in this function, it use socket_create() to
+   generate a GRE link to pptp server which is used to encapsulate ppp package, and then set &amp;pppopns_channel_ops for
+   po->chan.ops, and also set pppopns_recv() for sk_raw->sk_data_ready. so now pppopns_xmit() which is responsible
+   for transmiting package and pppopns_recv() which is responsible for receiving package is installed successfully.
+   till now GRE tunnel is ready for PPP package.</p>
+
+<h2>2. Date plane</h2>
+
+<ol>
+<li>while pppd daemon is launched, it will execute normal ppp process, such as LCP, NCP, and also IP package at last.
+while PPP package is ready, kernel will call pppopns_xmit() function which has already been registered into kernel.</li>
+<li>in pppopns_xmit() function, this PPP package will be as a GRE payload, and be sent to pptp server by using GRE tunnel,
+so now the package&rsquo;s format is as below:
+| L1 | L2 | IP | GRE | PPP |
+Please note: this PPP message contains PPP, IP and upper layer data.</li>
+<li>while package is received from pptp server, the package will be parsed as a normal GRE package, for GRE raw data,
+it will be transfered to pppopns_recv() funciton.</li>
+<li>in pppopns_recv(), the raw PPP package will be transfered to ppp_input() function.</li>
+</ol>
+
+
+<p>This document comes from the link in [1].</p>
+
+<p>Reference:
+[1] <a href="http://blog.csdn.net/linweig/article/details/6127270">http://blog.csdn.net/linweig/article/details/6127270</a></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Week Reference - what is it and how to use it ? ]]></title>
+    <link href="http://changyihsin.github.io/blog/2013/06/04/week-reference-what-is-it-and-how-to-use-it/"/>
+    <updated>2013-06-04T10:31:00+08:00</updated>
+    <id>http://changyihsin.github.io/blog/2013/06/04/week-reference-what-is-it-and-how-to-use-it</id>
+    <content type="html"><![CDATA[<p>In XPCOM, a weak reference is a special object that contains a pointer to an XPCOM object,
+but does not keep that object alive. If the referent object is destroyed before the weak
+reference, the pointer inside the weak reference is set to nsnull.</p>
+
+<h2>How do I use it?</h2>
+
+<p>Here&rsquo;s an example. The new and interesting things are highlighted.</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cp">#include &quot;nsWeakPtr.h&quot;</span>
+</span><span class='line'><span class="cp">#include &quot;nsIWeakReferenceUtils.h&quot;</span>
+</span><span class='line'><span class="c1">// ...</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// it&#39;s easy to get a weak reference...</span>
+</span><span class='line'><span class="n">nsWeakPtr</span> <span class="n">weakPtr</span> <span class="o">=</span> <span class="n">do_GetWeakReference</span><span class="p">(</span><span class="n">aFooPtr</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// ...</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">{</span>   <span class="c1">// ...but to use my weak reference, I&#39;ll need a (short-lived) owning reference</span>
+</span><span class='line'>  <span class="n">nsCOMPtr</span><span class="o">&lt;</span><span class="n">nsIFoo</span><span class="o">&gt;</span> <span class="n">tempFooPtr</span> <span class="o">=</span> <span class="n">do_QueryReferent</span><span class="p">(</span><span class="n">weakPtr</span><span class="p">);</span>
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span> <span class="n">tempFooPtr</span> <span class="p">)</span>
+</span><span class='line'>    <span class="n">tempFooPtr</span><span class="o">-&gt;</span><span class="n">SomeFooMethod</span><span class="p">(...);</span>
+</span><span class='line'>  <span class="c1">// else, the `real&#39; object has gone away</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">class</span> <span class="n">nsObservable</span>
+</span><span class='line'>  <span class="p">{</span>
+</span><span class='line'>    <span class="nl">public:</span>
+</span><span class='line'>      <span class="c1">// ...</span>
+</span><span class='line'>      <span class="n">nsresult</span> <span class="n">AddObserver</span><span class="p">(</span> <span class="n">nsIObserver</span><span class="o">*</span> <span class="p">);</span>
+</span><span class='line'>      <span class="n">nsresult</span> <span class="nf">NotifyObservers</span><span class="p">(</span> <span class="n">nsIMessage</span><span class="o">*</span> <span class="p">);</span>
+</span><span class='line'>      <span class="c1">// ...</span>
+</span><span class='line'>    <span class="nl">private:</span>
+</span><span class='line'>      <span class="n">nsWeakPtr</span> <span class="n">mObserver</span><span class="p">;</span>
+</span><span class='line'>      <span class="c1">// ...or imagine a list of observers here</span>
+</span><span class='line'>  <span class="p">};</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// ...</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">nsresult</span>
+</span><span class='line'><span class="n">nsObservable</span><span class="o">::</span><span class="n">AddObserver</span><span class="p">(</span> <span class="n">nsIObserver</span><span class="o">*</span> <span class="n">aObserver</span> <span class="p">)</span>
+</span><span class='line'>  <span class="p">{</span>
+</span><span class='line'>    <span class="n">mObserver</span> <span class="o">=</span> <span class="n">getter_AddRefs</span><span class="p">(</span> <span class="n">NS_GetWeakReference</span><span class="p">(</span><span class="n">aObserver</span><span class="p">)</span> <span class="p">);</span>
+</span><span class='line'>      <span class="c1">// ...or append this to the list of observers</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">NS_OK</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">nsresult</span>
+</span><span class='line'><span class="n">nsObservable</span><span class="o">::</span><span class="n">NotifyObservers</span><span class="p">(</span> <span class="n">nsIMessage</span><span class="o">*</span> <span class="n">aMessage</span> <span class="p">)</span>
+</span><span class='line'>  <span class="p">{</span>
+</span><span class='line'>    <span class="n">nsCOMPtr</span><span class="o">&lt;</span><span class="n">nsIObserver</span><span class="o">&gt;</span> <span class="n">observer</span> <span class="o">=</span> <span class="n">do_QueryReferent</span><span class="p">(</span><span class="n">mObserver</span><span class="p">);</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span> <span class="n">observer</span> <span class="p">)</span>
+</span><span class='line'>      <span class="n">observer</span><span class="o">-&gt;</span><span class="n">NoticeMessage</span><span class="p">(</span><span class="n">aMessage</span><span class="p">);</span>
+</span><span class='line'>    <span class="k">else</span>
+</span><span class='line'>      <span class="n">mObserver</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'>      <span class="c1">// or remove this observer from the list, he&#39;s gone away</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">NS_OK</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// ...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Octopress Blog Howto]]></title>
